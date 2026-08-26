@@ -311,7 +311,7 @@ button{cursor:pointer; border:0; background:none}
   var state = { v:1, budget:50, entries:[], updatedAt:0 };
   var selectedDay = null;
   var activeCat = CATS[0];
-  var ns = null, saveTimer = null, retried = false, freshId = null;
+  var ns = null, dl = null, saveTimer = null, retried = false, freshId = null;
 
   var $ = function(id){ return document.getElementById(id); };
 
@@ -588,11 +588,26 @@ button{cursor:pointer; border:0; background:none}
 
   /* ---------- backup ---------- */
   function exportBackup(){
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type:"application/json" });
-    var url = URL.createObjectURL(blob);
+    var json = JSON.stringify(state, null, 2);
+    var name = "under-fifty-" + todayKey() + ".json";
+
+    /* Inside the Claude artifact viewer a page can't hand over a file on its
+       own — the host mediates it and asks the viewer to confirm. */
+    if(dl){
+      dl.save({ filename:name, data:json }).then(function(){
+        $("footNote").textContent = "Backup saved.";
+      }, function(err){
+        if(err && err.code === "declined") return;
+        $("footNote").textContent = "Couldn't save a backup from this view.";
+      });
+      return;
+    }
+
+    /* Installed app or any static host: a plain download link is enough. */
+    var url = URL.createObjectURL(new Blob([json], { type:"application/json" }));
     var a = document.createElement("a");
     a.href = url;
-    a.download = "under-fifty-" + todayKey() + ".json";
+    a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
   }
@@ -708,6 +723,9 @@ button{cursor:pointer; border:0; background:none}
     render();
 
     var hosted = !!(window.claude && window.claude.use);
+    if(hosted){
+      window.claude.use("downloads").then(function(d){ dl = d; }, function(){});
+    }
     Promise.all([
       hosted ? loadRemote() : Promise.resolve(null),
       hosted ? window.claude.use("artifact").catch(function(){ return null; }) : Promise.resolve(null)
