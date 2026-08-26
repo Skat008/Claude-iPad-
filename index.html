@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Under Fifty</title>
+<meta name="description" content="A daily spending log built around a ¥50 limit.">
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F5F7F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1512" media="(prefers-color-scheme: dark)">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Under Fifty">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+
+<style>
+*{-webkit-tap-highlight-color:transparent}
+html{height:100%}
+
+:root{
+  --paper:#F5F7F2; --card:#FFFFFF; --ink:#14201B; --muted:#6B7770;
+  --line:#DFE5DC; --line-soft:#EAEFE7;
+  --jade:#1B7A5A; --amber:#9C6206; --clay:#B03A32;
+  --field:#FFFFFF; --chip:#EDF1EA;
+  --shadow:0 1px 2px rgba(20,32,27,.05), 0 10px 28px -16px rgba(20,32,27,.28);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1512; --card:#161E1A; --ink:#E7EEE8; --muted:#8B9A92;
+    --line:#26312C; --line-soft:#1E2723;
+    --jade:#4CC393; --amber:#E0A63C; --clay:#E8736A;
+    --field:#101815; --chip:#1E2723;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1512; --card:#161E1A; --ink:#E7EEE8; --muted:#8B9A92;
+  --line:#26312C; --line-soft:#1E2723;
+  --jade:#4CC393; --amber:#E0A63C; --clay:#E8736A;
+  --field:#101815; --chip:#1E2723;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -16px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.45;
+  -webkit-text-size-adjust:100%;
+  padding:max(16px, env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+}
+.app{max-width:31rem; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+.app[data-state="safe"]{--state:var(--jade)}
+.app[data-state="close"]{--state:var(--amber)}
+.app[data-state="over"]{--state:var(--clay)}
+
+button,input{font:inherit; color:inherit}
+button{cursor:pointer; border:0; background:none}
+:focus-visible{outline:2px solid var(--state,var(--jade)); outline-offset:2px; border-radius:6px}
+
+/* ---- masthead ---- */
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:2px 2px 0}
+.brand{font-family:"Instrument Serif",Georgia,serif; font-size:1.35rem; letter-spacing:.01em}
+.status{font-size:.72rem; color:var(--muted); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap}
+.status[data-s="saving"]{color:var(--amber)}
+
+/* ---- hero ---- */
+.hero{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  box-shadow:var(--shadow); padding:20px 20px 18px;
+  display:flex; flex-direction:column; gap:14px;
+}
+.hero-head{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.hero-label{font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500}
+.today-btn{
+  font-size:.74rem; letter-spacing:.04em; color:var(--state,var(--jade)); font-weight:600;
+  border:1px solid var(--line); border-radius:999px; padding:4px 11px;
+}
+.today-btn[hidden]{display:none}
+.hero-amount{display:flex; align-items:baseline; gap:.12em; color:var(--state,var(--jade)); line-height:.92}
+.hero-cur{font-family:"Instrument Serif",Georgia,serif; font-size:2.1rem; opacity:.55}
+.hero-num{font-family:"Instrument Serif",Georgia,serif; font-size:4.6rem; font-variant-numeric:tabular-nums}
+.hero-sub{font-size:.9rem; color:var(--muted); margin-top:-4px}
+.hero-sub b{color:var(--ink); font-weight:500}
+
+/* ---- gauge ---- */
+.gauge{position:relative; height:12px; background:var(--chip); border-radius:999px; overflow:hidden}
+.gauge-fill{
+  position:absolute; inset:0 auto 0 0; width:0%; background:var(--state,var(--jade));
+  border-radius:999px; transition:width .45s cubic-bezier(.22,.7,.3,1), background-color .3s;
+}
+.gauge-ticks{position:absolute; inset:0; display:flex}
+.gauge-ticks i{flex:1; border-right:1px solid var(--paper); opacity:.85}
+.gauge-ticks i:last-child{border-right:0}
+.scale{display:flex; justify-content:space-between; font-size:.7rem; color:var(--muted);
+  font-family:"IBM Plex Mono",ui-monospace,monospace; letter-spacing:.02em; margin-top:-6px}
+
+/* ---- entry ---- */
+.entry{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  box-shadow:var(--shadow); padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+.entry-row{display:flex; gap:10px}
+.amount-field{
+  flex:1 1 0; min-width:0; display:flex; align-items:center; gap:6px; background:var(--field);
+  border:1px solid var(--line); border-radius:11px; padding:0 12px; min-height:52px;
+}
+.amount-field:focus-within{border-color:var(--state,var(--jade))}
+.amount-cur{font-family:"Instrument Serif",Georgia,serif; font-size:1.5rem; color:var(--muted)}
+#amountInput{
+  flex:1 1 0; min-width:0; width:100%; border:0; background:none; padding:0;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:1.5rem; font-weight:500;
+  font-variant-numeric:tabular-nums;
+}
+#amountInput::placeholder{color:var(--muted); opacity:.5}
+#amountInput:focus{outline:none}
+.add-btn{
+  flex:0 0 auto; background:var(--ink); color:var(--paper); border-radius:11px; padding:0 22px; min-height:52px;
+  font-weight:600; font-size:.95rem; letter-spacing:.01em; transition:opacity .15s, transform .1s;
+}
+.add-btn:active{transform:scale(.97)}
+.add-btn:disabled{opacity:.4; cursor:default}
+#noteInput{
+  border:1px solid var(--line); background:var(--field); border-radius:11px;
+  padding:11px 12px; min-height:44px; width:100%;
+}
+#noteInput:focus{outline:none; border-color:var(--state,var(--jade))}
+#noteInput::placeholder{color:var(--muted); opacity:.7}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{
+  background:var(--chip); color:var(--muted); border-radius:999px;
+  padding:7px 13px; font-size:.82rem; font-weight:500; min-height:34px;
+  border:1px solid transparent; transition:all .14s;
+}
+.chip[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+
+/* ---- ledger ---- */
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
+.panel-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:14px 16px 10px; border-bottom:1px solid var(--line-soft);
+}
+.panel-title{font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500}
+.panel-total{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.9rem; font-variant-numeric:tabular-nums}
+.ledger{list-style:none; margin:0; padding:0}
+.ledger li{
+  display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px;
+  padding:11px 16px; border-bottom:1px solid var(--line-soft);
+}
+.ledger li:last-child{border-bottom:0}
+.li-main{min-width:0}
+.li-note{font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.li-meta{font-size:.72rem; color:var(--muted); letter-spacing:.03em; margin-top:1px}
+.li-amt{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.95rem; font-variant-numeric:tabular-nums}
+.li-del{
+  width:30px; height:30px; border-radius:8px; color:var(--muted); font-size:1.15rem;
+  line-height:1; display:grid; place-items:center; transition:all .14s;
+}
+.li-del:hover,.li-del:focus-visible{background:var(--chip); color:var(--clay)}
+.empty{padding:22px 16px; color:var(--muted); font-size:.9rem; text-align:center}
+@keyframes slidein{from{opacity:0; transform:translateY(-6px)}to{opacity:1; transform:none}}
+.ledger li.fresh{animation:slidein .3s ease}
+
+/* ---- history ---- */
+.chart{padding:16px 16px 12px; position:relative}
+.chart-bars{display:flex; align-items:flex-end; gap:4px; height:78px; position:relative}
+.day{
+  flex:1; display:flex; flex-direction:column; justify-content:flex-end; height:100%;
+  padding:0; border-radius:4px 4px 0 0; position:relative;
+}
+.day-bar{
+  width:100%; border-radius:3px 3px 0 0; background:var(--jade); min-height:2px;
+  transition:height .4s cubic-bezier(.22,.7,.3,1);
+}
+.day[data-d="over"] .day-bar{background:var(--clay)}
+.day[data-d="none"] .day-bar{background:var(--line); min-height:2px}
+.day[aria-pressed="true"]::after{
+  content:""; position:absolute; left:0; right:0; bottom:-7px; height:2px;
+  background:var(--ink); border-radius:2px;
+}
+.limit-line{position:absolute; left:0; right:0; border-top:1px dashed var(--muted); opacity:.5}
+.limit-tag{
+  position:absolute; right:0; transform:translateY(-100%); font-size:.64rem; color:var(--muted);
+  font-family:"IBM Plex Mono",ui-monospace,monospace; padding-bottom:2px; letter-spacing:.03em;
+}
+.chart-axis{display:flex; gap:4px; margin-top:11px}
+.chart-axis span{flex:1; text-align:center; font-size:.62rem; color:var(--muted); letter-spacing:.02em}
+.stats{display:flex; border-top:1px solid var(--line-soft)}
+.stat{flex:1; padding:12px 16px; border-right:1px solid var(--line-soft)}
+.stat:last-child{border-right:0}
+.stat-v{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:1.05rem; font-variant-numeric:tabular-nums}
+.stat-l{font-size:.68rem; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:2px}
+
+/* ---- settings ---- */
+.settings{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px}
+.settings label{font-size:.82rem; color:var(--muted)}
+.budget-field{display:flex; align-items:center; gap:4px; background:var(--card);
+  border:1px solid var(--line); border-radius:9px; padding:5px 10px}
+.budget-field span{color:var(--muted); font-family:"Instrument Serif",Georgia,serif; font-size:1.05rem}
+#budgetInput{width:3.6em; border:0; background:none; padding:0; text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+#budgetInput:focus{outline:none}
+.note{font-size:.72rem; color:var(--muted); text-align:center; padding:0 8px; line-height:1.5}
+
+
+.backup{display:flex; align-items:center; justify-content:center; gap:8px; padding:2px 0}
+.link-btn{font-size:.78rem; color:var(--muted); text-decoration:underline; text-underline-offset:3px;
+  padding:6px 4px; min-height:34px}
+.link-btn:hover,.link-btn:focus-visible{color:var(--ink)}
+.backup .dot{color:var(--muted); opacity:.5}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important; transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app" data-state="safe">
+
+  <div class="top">
+    <div class="brand">Under Fifty</div>
+    <div class="status" id="status" data-s="idle">Ready</div>
+  </div>
+
+  <section class="hero">
+    <div class="hero-head">
+      <div class="hero-label" id="heroLabel">Left today</div>
+      <button class="today-btn" id="todayBtn" type="button" hidden>Back to today</button>
+    </div>
+    <div class="hero-amount">
+      <span class="hero-cur">¥</span><span class="hero-num" id="heroNum">50</span>
+    </div>
+    <div class="hero-sub" id="heroSub">Nothing spent yet.</div>
+    <div class="gauge" role="img" id="gauge" aria-label="Nothing spent yet">
+      <div class="gauge-fill" id="gaugeFill"></div>
+      <div class="gauge-ticks"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="scale"><span>¥0</span><span id="scaleMax">¥50</span></div>
+  </section>
+
+  <form class="entry" id="entryForm">
+    <div class="entry-row">
+      <div class="amount-field">
+        <span class="amount-cur">¥</span>
+        <input id="amountInput" type="text" inputmode="decimal" autocomplete="off"
+               placeholder="0.00" aria-label="Amount spent">
+      </div>
+      <button class="add-btn" id="addBtn" type="submit" disabled>Add</button>
+    </div>
+    <input id="noteInput" type="text" autocomplete="off" placeholder="What was it for?" aria-label="What it was for">
+    <div class="chips" id="chips" role="group" aria-label="Category"></div>
+  </form>
+
+  <section class="panel">
+    <div class="panel-head">
+      <span class="panel-title" id="ledgerTitle">Today</span>
+      <span class="panel-total" id="ledgerTotal">¥0.00</span>
+    </div>
+    <ul class="ledger" id="ledger"></ul>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><span class="panel-title">Last 14 days</span></div>
+    <div class="chart">
+      <div class="chart-bars" id="chartBars">
+        <div class="limit-line" id="limitLine"><span class="limit-tag" id="limitTag">¥50</span></div>
+      </div>
+      <div class="chart-axis" id="chartAxis"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-v" id="statUnder">–</div><div class="stat-l">Days under</div></div>
+      <div class="stat"><div class="stat-v" id="statAvg">–</div><div class="stat-l">Daily average</div></div>
+      <div class="stat"><div class="stat-v" id="statStreak">–</div><div class="stat-l">Streak</div></div>
+    </div>
+  </section>
+
+  <div class="settings">
+    <label for="budgetInput">Daily limit</label>
+    <div class="budget-field"><span>¥</span><input id="budgetInput" type="text" inputmode="decimal" value="50"></div>
+  </div>
+
+  <div class="backup">
+    <button class="link-btn" id="exportBtn" type="button">Export backup</button>
+    <span class="dot">·</span>
+    <button class="link-btn" id="importBtn" type="button">Import</button>
+    <input id="importFile" type="file" accept="application/json,.json" hidden>
+  </div>
+
+  <p class="note" id="footNote">Saved to this page, so it follows you to any device you open it on.</p>
+</div>
+
+<script>
+
+(function(){
+  "use strict";
+
+  var CATS = ["Canteen","Drinks","Delivery","Transport","Daily","Fun","Other"];
+  var KEY = "underfifty.v1";
+  var DATA_PATH = "data/expenses.json";
+
+  var state = { v:1, budget:50, entries:[], updatedAt:0 };
+  var selectedDay = null;
+  var activeCat = CATS[0];
+  var ns = null, saveTimer = null, retried = false, freshId = null;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- dates ---------- */
+  function pad(n){ return (n<10?"0":"")+n; }
+  function keyOf(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function todayKey(){ return keyOf(new Date()); }
+  function dateFromKey(k){ var p=k.split("-"); return new Date(+p[0], +p[1]-1, +p[2], 12, 0, 0); }
+  function shiftKey(k, n){ var d=dateFromKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
+
+  function labelFor(k){
+    var t = todayKey();
+    if(k===t) return "Today";
+    if(k===shiftKey(t,-1)) return "Yesterday";
+    var d = dateFromKey(k);
+    return d.toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"});
+  }
+
+  /* ---------- money ---------- */
+  function money(n){
+    var v = Math.round(n*100)/100;
+    return v.toFixed(Math.abs(v - Math.round(v)) < 0.005 ? 0 : 2);
+  }
+  function parseAmount(s){
+    var n = parseFloat(String(s).replace(/[^0-9.]/g,""));
+    return isFinite(n) && n > 0 ? Math.round(n*100)/100 : null;
+  }
+
+  /* ---------- state ---------- */
+  function normalize(o){
+    var s = { v:1, budget:50, entries:[], updatedAt:0 };
+    if(!o || typeof o !== "object") return s;
+    var b = parseFloat(o.budget);
+    if(isFinite(b) && b > 0) s.budget = Math.round(b*100)/100;
+    s.updatedAt = +o.updatedAt || 0;
+    if(Array.isArray(o.entries)){
+      s.entries = o.entries.map(function(e){
+        var a = parseFloat(e && e.amount);
+        if(!isFinite(a) || a <= 0) return null;
+        var ts = +(e.ts) || Date.now();
+        return {
+          id:  String(e.id || (ts + "-" + Math.random().toString(36).slice(2,7))),
+          ts:  ts,
+          day: typeof e.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.day) ? e.day : keyOf(new Date(ts)),
+          amount: Math.round(a*100)/100,
+          note: String(e.note == null ? "" : e.note).slice(0,120),
+          cat:  CATS.indexOf(e.cat) >= 0 ? e.cat : "Other"
+        };
+      }).filter(Boolean);
+      s.entries.sort(function(a,b){ return b.ts - a.ts; });
+    }
+    return s;
+  }
+
+  function entriesFor(day){
+    return state.entries.filter(function(e){ return e.day === day; });
+  }
+  function totalFor(day){
+    return entriesFor(day).reduce(function(sum,e){ return sum + e.amount; }, 0);
+  }
+
+  /* ---------- persistence ---------- */
+  function setStatus(kind){
+    var el = $("status");
+    el.dataset.s = kind;
+    el.textContent = kind === "saving" ? "Saving…"
+                   : kind === "saved"  ? "Saved"
+                   : kind === "local"  ? "On this device"
+                   : "Ready";
+  }
+
+  function saveLocal(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(err){}
+  }
+
+  function touch(){
+    state.updatedAt = Date.now();
+    saveLocal();
+    if(!ns){ setStatus("local"); return; }
+    setStatus("saving");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(push, 1600);
+  }
+
+  function push(){
+    if(!ns) { setStatus("local"); return; }
+    var payload = {};
+    payload[DATA_PATH] = JSON.stringify(state);
+    ns.publish(payload).then(function(){
+      retried = false;
+      setStatus("saved");
+    }, function(err){
+      var code = err && err.code;
+      if((code === "conflict" || code === "upstream_error") && !retried){
+        retried = true;
+        setTimeout(push, 1800);
+        return;
+      }
+      if(code === "rate_limited"){ setTimeout(push, 9000); return; }
+      ns = null;
+      setStatus("local");
+      $("footNote").textContent = "Saved on this device only — this view can't write back to the page.";
+    });
+  }
+
+  function loadRemote(){
+    return fetch(DATA_PATH, { cache:"no-store" }).then(function(r){
+      return r.ok ? r.json() : null;
+    }).catch(function(){ return null; });
+  }
+
+  /* ---------- rendering ---------- */
+  function render(){
+    var day = selectedDay;
+    var isToday = day === todayKey();
+    var spent = totalFor(day);
+    var budget = state.budget;
+    var left = budget - spent;
+    var over = spent > budget;
+    var close = !over && left <= budget * 0.2;
+
+    $("app").dataset.state = over ? "over" : close ? "close" : "safe";
+
+    /* hero */
+    $("heroLabel").textContent = over
+      ? (isToday ? "Over today" : "Over on " + labelFor(day))
+      : (isToday ? "Left today" : "Left on " + labelFor(day));
+    $("heroNum").textContent = money(over ? spent - budget : left);
+    $("todayBtn").hidden = isToday;
+
+    var sub;
+    if(spent === 0) sub = "Nothing spent yet.";
+    else if(over)  sub = "Spent <b>¥" + money(spent) + "</b> against a ¥" + money(budget) + " limit.";
+    else           sub = "Spent <b>¥" + money(spent) + "</b> of ¥" + money(budget) + ".";
+    $("heroSub").innerHTML = sub;
+
+    var pct = budget > 0 ? Math.min(spent / budget, 1) * 100 : 0;
+    $("gaugeFill").style.width = pct.toFixed(1) + "%";
+    $("gauge").setAttribute("aria-label",
+      "¥" + money(spent) + " spent of a ¥" + money(budget) + " limit");
+    $("scaleMax").textContent = "¥" + money(budget);
+
+    /* ledger */
+    var rows = entriesFor(day);
+    $("ledgerTitle").textContent = labelFor(day);
+    $("ledgerTotal").textContent = "¥" + money(spent);
+
+    var ul = $("ledger");
+    ul.textContent = "";
+    if(!rows.length){
+      var li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = isToday ? "Nothing logged yet today." : "Nothing logged on this day.";
+      ul.appendChild(li);
+    } else {
+      rows.forEach(function(e){
+        var li = document.createElement("li");
+        if(e.id === freshId) li.className = "fresh";
+
+        var main = document.createElement("div");
+        main.className = "li-main";
+        var note = document.createElement("div");
+        note.className = "li-note";
+        note.textContent = e.note || e.cat;
+        var meta = document.createElement("div");
+        meta.className = "li-meta";
+        var time = new Date(e.ts).toLocaleTimeString(undefined,{hour:"numeric", minute:"2-digit"});
+        meta.textContent = e.note ? e.cat + " · " + time : time;
+        main.appendChild(note); main.appendChild(meta);
+
+        var amt = document.createElement("div");
+        amt.className = "li-amt";
+        amt.textContent = "¥" + money(e.amount);
+
+        var del = document.createElement("button");
+        del.className = "li-del";
+        del.type = "button";
+        del.textContent = "×";
+        del.setAttribute("aria-label", "Remove " + (e.note || e.cat) + ", ¥" + money(e.amount));
+        del.addEventListener("click", function(){ removeEntry(e.id); });
+
+        li.appendChild(main); li.appendChild(amt); li.appendChild(del);
+        ul.appendChild(li);
+      });
+    }
+    freshId = null;
+
+    renderChart();
+  }
+
+  function renderChart(){
+    var days = [], t = todayKey();
+    for(var i = 13; i >= 0; i--) days.push(shiftKey(t, -i));
+
+    var totals = days.map(totalFor);
+    var budget = state.budget;
+    var peak = Math.max(budget * 1.25, Math.max.apply(null, totals) * 1.1, 1);
+
+    var bars = $("chartBars");
+    Array.prototype.slice.call(bars.querySelectorAll(".day")).forEach(function(n){ n.remove(); });
+
+    days.forEach(function(k, i){
+      var total = totals[i];
+      var b = document.createElement("button");
+      b.className = "day";
+      b.type = "button";
+      b.dataset.d = total === 0 ? "none" : total > budget ? "over" : "under";
+      b.setAttribute("aria-pressed", String(k === selectedDay));
+      b.setAttribute("aria-label", labelFor(k) + ": ¥" + money(total));
+      b.title = labelFor(k) + " · ¥" + money(total);
+
+      var bar = document.createElement("div");
+      bar.className = "day-bar";
+      bar.style.height = total === 0 ? "2px" : Math.max(3, (total / peak) * 100) + "%";
+      b.appendChild(bar);
+
+      b.addEventListener("click", function(){ selectedDay = k; render(); });
+      bars.appendChild(b);
+    });
+
+    $("limitLine").style.bottom = ((budget / peak) * 100) + "%";
+    $("limitTag").textContent = "¥" + money(budget);
+
+    var axis = $("chartAxis");
+    axis.textContent = "";
+    days.forEach(function(k, i){
+      var s = document.createElement("span");
+      s.textContent = (i % 2 === 0 || i === 13)
+        ? dateFromKey(k).toLocaleDateString(undefined,{weekday:"narrow"}) : "";
+      axis.appendChild(s);
+    });
+
+    /* stats — only over days that have actually happened */
+    var logged = days.filter(function(k){ return totalFor(k) > 0; });
+    var under = days.filter(function(k){ var v = totalFor(k); return v > 0 && v <= budget; }).length;
+    $("statUnder").textContent = logged.length ? under + "/" + logged.length : "–";
+
+    var sum = logged.reduce(function(a,k){ return a + totalFor(k); }, 0);
+    $("statAvg").textContent = logged.length ? "¥" + money(sum / logged.length) : "–";
+
+    /* streak: consecutive days at or under the limit, ending today (skipping unlogged) */
+    var streak = 0;
+    for(var j = days.length - 1; j >= 0; j--){
+      var v = totalFor(days[j]);
+      if(v === 0){ if(days[j] === t) continue; else break; }
+      if(v <= budget) streak++; else break;
+    }
+    $("statStreak").textContent = streak ? streak + (streak === 1 ? " day" : " days") : "–";
+  }
+
+  /* ---------- actions ---------- */
+  function addEntry(amount, note, cat){
+    var day = selectedDay;
+    var ts = day === todayKey() ? Date.now() : dateFromKey(day).getTime();
+    var e = {
+      id: ts + "-" + Math.random().toString(36).slice(2,7),
+      ts: ts, day: day, amount: amount,
+      note: note.slice(0,120), cat: cat
+    };
+    state.entries.unshift(e);
+    state.entries.sort(function(a,b){ return b.ts - a.ts; });
+    freshId = e.id;
+    touch();
+    render();
+  }
+
+  function removeEntry(id){
+    state.entries = state.entries.filter(function(e){ return e.id !== id; });
+    touch();
+    render();
+  }
+
+
+
+  /* ---------- backup ---------- */
+  function exportBackup(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type:"application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "under-fifty-" + todayKey() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+  }
+
+  function importBackup(file){
+    var fr = new FileReader();
+    fr.onload = function(){
+      var incoming;
+      try { incoming = normalize(JSON.parse(fr.result)); }
+      catch(err){ $("footNote").textContent = "That file isn't a valid Under Fifty backup."; return; }
+
+      var seen = {};
+      state.entries.forEach(function(e){ seen[e.id] = true; });
+      var added = 0;
+      incoming.entries.forEach(function(e){
+        if(!seen[e.id]){ state.entries.push(e); added++; }
+      });
+      state.entries.sort(function(a,b){ return b.ts - a.ts; });
+      if(incoming.budget) state.budget = incoming.budget;
+      $("budgetInput").value = money(state.budget);
+      touch(); render();
+      $("footNote").textContent = added
+        ? "Merged " + added + (added === 1 ? " entry" : " entries") + " from your backup."
+        : "Backup was already up to date — nothing new to add.";
+    };
+    fr.readAsText(file);
+  }
+
+  /* ---------- wiring ---------- */
+  function buildChips(){
+    var box = $("chips");
+    CATS.forEach(function(c){
+      var b = document.createElement("button");
+      b.className = "chip";
+      b.type = "button";
+      b.textContent = c;
+      b.setAttribute("aria-pressed", String(c === activeCat));
+      b.addEventListener("click", function(){
+        activeCat = c;
+        Array.prototype.slice.call(box.children).forEach(function(n){
+          n.setAttribute("aria-pressed", String(n === b));
+        });
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function wire(){
+    var amount = $("amountInput"), note = $("noteInput"), addBtn = $("addBtn");
+
+    amount.addEventListener("input", function(){
+      addBtn.disabled = parseAmount(amount.value) === null;
+    });
+
+    $("entryForm").addEventListener("submit", function(ev){
+      ev.preventDefault();
+      var v = parseAmount(amount.value);
+      if(v === null) return;
+      addEntry(v, note.value.trim(), activeCat);
+      amount.value = ""; note.value = ""; addBtn.disabled = true;
+      amount.focus();
+    });
+
+    $("todayBtn").addEventListener("click", function(){
+      selectedDay = todayKey();
+      render();
+    });
+
+    var budget = $("budgetInput");
+    function commitBudget(){
+      var v = parseAmount(budget.value);
+      if(v === null){ budget.value = money(state.budget); return; }
+      state.budget = v;
+      budget.value = money(v);
+      touch();
+      render();
+    }
+    budget.addEventListener("change", commitBudget);
+    budget.addEventListener("blur", commitBudget);
+    budget.addEventListener("keydown", function(ev){ if(ev.key === "Enter") budget.blur(); });
+
+
+    $("exportBtn").addEventListener("click", exportBackup);
+    $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+    $("importFile").addEventListener("change", function(){
+      if(this.files && this.files[0]) importBackup(this.files[0]);
+      this.value = "";
+    });
+
+    /* if the page is left open past midnight, roll the day over on return */
+    document.addEventListener("visibilitychange", function(){
+      if(!document.hidden && selectedDay !== todayKey() && $("todayBtn").hidden){
+        selectedDay = todayKey();
+        render();
+      }
+    });
+  }
+
+  /* ---------- boot ---------- */
+  function boot(){
+    selectedDay = todayKey();
+    buildChips();
+    wire();
+
+    var local = null;
+    try {
+      var raw = localStorage.getItem(KEY);
+      if(raw) local = JSON.parse(raw);
+    } catch(err){}
+
+    if(local) state = normalize(local);
+    $("budgetInput").value = money(state.budget);
+    render();
+
+    var hosted = !!(window.claude && window.claude.use);
+    Promise.all([
+      hosted ? loadRemote() : Promise.resolve(null),
+      hosted ? window.claude.use("artifact").catch(function(){ return null; }) : Promise.resolve(null)
+    ]).then(function(res){
+      var remote = res[0];
+      ns = res[1];
+
+      if(remote){
+        var r = normalize(remote);
+        if(r.updatedAt >= state.updatedAt) state = r;
+      }
+      $("budgetInput").value = money(state.budget);
+      if(selectedDay !== todayKey() && $("todayBtn").hidden) selectedDay = todayKey();
+      render();
+
+      if(ns){
+        setStatus("saved");
+      } else {
+        setStatus("local");
+        $("footNote").textContent = "Saved on this phone. Export a backup before you change devices.";
+      }
+    });
+  }
+
+  boot();
+})();
+
+</script>
+
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
