@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Archivo:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#FFFFFF;
+  --panel:#F1F1F4;
+  --ink:#15151A;
+  --muted:#63636B;
+  --faint:#8C8C95;
+  --rule:#D7D7DE;
+  --rule-soft:#E7E7EC;
+  --serif:"Bodoni Moda", Didot, "Times New Roman", serif;
+  --sans:"Archivo", "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html,body{width:1600px; height:1000px; overflow:hidden}
+body{background:var(--paper); color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased}
+
+.card{position:relative; width:1600px; height:1000px}
+
+/* Every plate is placed absolutely at an exact pixel box, so no intrinsic
+   image size can push the layout around. */
+.ph{position:absolute; background-repeat:no-repeat; background-size:cover}
+
+/* ── left: nameplate + the lead print ─────────────────────────────── */
+.plate{
+  position:absolute; left:0; top:0; width:500px; height:150px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px;
+  border-bottom:1px solid var(--rule-soft);
+}
+.plate__eyebrow{
+  font-size:13px; font-weight:500; letter-spacing:.34em;
+  text-transform:uppercase; color:var(--muted); padding-left:.34em;
+}
+.plate__name{
+  display:flex; align-items:center; gap:26px;
+  font-family:var(--serif); font-variation-settings:"opsz" 88;
+  font-weight:400; font-size:74px; line-height:1; letter-spacing:.07em; padding-left:.07em;
+}
+.plate__name::before,.plate__name::after{content:""; width:54px; height:2px; background:var(--ink)}
+
+.lead{left:0; top:150px; width:500px; height:850px; background-position:47% 46%}
+
+/* ── middle: the data column ──────────────────────────────────────── */
+.data{
+  position:absolute; left:500px; top:0; width:320px; height:1000px;
+  padding:46px 38px 40px;
+  border-inline:1px solid var(--rule-soft);
+  display:flex; flex-direction:column; gap:32px;
+  justify-content:space-between;
+}
+.block__head{
+  font-size:16.5px; font-weight:600; letter-spacing:.13em; text-transform:uppercase;
+  padding-bottom:11px; border-bottom:1px solid var(--rule); margin-bottom:16px;
+}
+.rows{display:grid; grid-template-columns:92px 1fr; row-gap:10px; column-gap:10px}
+.rows dt{font-size:14.5px; font-weight:600}
+.rows dd{font-size:14.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+.rows dd small{display:block; font-size:11.5px; color:var(--faint); letter-spacing:.04em; margin-top:2px}
+
+.notes{background:var(--panel); padding:21px 22px 23px}
+.notes .block__head{font-size:14.5px; margin-bottom:13px; padding-bottom:9px}
+.notes ul{list-style:none; display:flex; flex-direction:column; gap:8px}
+.notes li{font-size:13.5px; color:var(--muted); line-height:1.35; padding-left:15px; position:relative}
+.notes li::before{content:""; position:absolute; left:0; top:8px; width:5px; height:5px; background:var(--faint); border-radius:50%}
+
+.contact{padding-top:22px; border-top:1px solid var(--rule-soft)}
+.contact__k{
+  font-size:10.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--faint); display:block; margin-bottom:7px;
+}
+.contact__v{font-size:13.5px}
+
+/* ── right: the frames ────────────────────────────────────────────── */
+.f1{left:820px;  top:0px;   width:383px; height:493px;  background-position:50% 44%}
+.f2{left:820px;  top:507px; width:383px; height:493px;  background-position:50% 30%}
+.f3{left:1217px; top:0px;   width:383px; height:1000px; background-position:70% 50%}
+</style>
+</head>
+<body>
+<div class="card">
+
+  <header class="plate">
+    <span class="plate__eyebrow">Model Card</span>
+    <h1 class="plate__name">MURAD</h1>
+  </header>
+  <div class="ph lead" style="background-image:url('__HERO__')"></div>
+
+  <section class="data">
+    <div>
+      <h2 class="block__head">Profile</h2>
+      <dl class="rows">
+        <dt>Name</dt><dd>Murad</dd>
+        <dt>Gender</dt><dd>Male</dd>
+        <dt>Age</dt><dd>18</dd>
+        <dt>Height</dt><dd>1.75 m <small>175 cm &nbsp;·&nbsp; 5&prime;9&Prime;</small></dd>
+        <dt>Weight</dt><dd>72 kg <small>159 lb</small></dd>
+        <dt>Hair</dt><dd>Dark brown</dd>
+        <dt>Eyes</dt><dd>Brown</dd>
+      </dl>
+    </div>
+
+    <div>
+      <h2 class="block__head">Measurements</h2>
+      <dl class="rows">
+        <dt>Clothing</dt><dd>M <small>EU 48</small></dd>
+        <dt>Shoes</dt><dd>EU 40 <small>US 7 &nbsp;·&nbsp; UK 6.5</small></dd>
+      </dl>
+    </div>
+
+    <div class="notes">
+      <h2 class="block__head">Notes</h2>
+      <ul>
+        <li>Men&rsquo;s new faces</li>
+        <li>Available for booking</li>
+        <li>Travels for work</li>
+        <li>Digitals &amp; polaroids on request</li>
+      </ul>
+    </div>
+
+    <div class="contact">
+      <span class="contact__k">Bookings</span>
+      <span class="contact__v">__EMAIL__</span>
+    </div>
+  </section>
+
+  <div class="ph f1" style="background-image:url('__STUDIO__')"></div>
+  <div class="ph f2" style="background-image:url('__STREET__')"></div>
+  <div class="ph f3" style="background-image:url('__FIELD__')"></div>
+
+</div>
+</body>
+</html>
