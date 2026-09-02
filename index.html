@@ -311,7 +311,7 @@ button{cursor:pointer; border:0; background:none}
   var state = { v:1, budget:50, entries:[], updatedAt:0 };
   var selectedDay = null;
   var activeCat = CATS[0];
-  var ns = null, dl = null, saveTimer = null, retried = false, freshId = null;
+  var ns = null, dl = null, retried = false, freshId = null;
 
   var $ = function(id){ return document.getElementById(id); };
 
@@ -392,8 +392,12 @@ button{cursor:pointer; border:0; background:none}
     saveLocal();
     if(!ns){ setStatus("local"); return; }
     setStatus("saving");
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(push, 1600);
+    /* Every call to touch() follows a discrete action (add, delete, budget
+       change) rather than a keystroke, so there is nothing to debounce —
+       and a delay here is actively harmful: on a phone, backgrounding or
+       closing the tab suspends JS almost immediately, so a queued timer
+       often never fires and the entry never reaches the saved copy. */
+    push();
   }
 
   function push(){
