@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Publish site
 
 on:
   push:
@@ -8,34 +8,28 @@ on:
 permissions:
   contents: read
   pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Point GitHub Pages at this branch's root. Once set, Pages rebuilds on
+  # every push by itself — no deployment environment, and nothing to switch
+  # on by hand in the repository settings.
+  enable-pages:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Check out the site
-        uses: actions/checkout@v4
-
-      # enablement:true switches Pages on via the API, so the site needs
-      # no manual setup in the repository settings.
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload the site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Serve this branch on Pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -eu
+          printf '{"source":{"branch":"%s","path":"/"}}' "$BRANCH" > body.json
+          echo "Requesting Pages for $REPO on branch $BRANCH"
+          if gh api -X POST "repos/$REPO/pages" --input body.json; then
+            echo "Pages created."
+          else
+            echo "Pages already exists — updating its source instead."
+            gh api -X PUT "repos/$REPO/pages" --input body.json
+          fi
+          echo "--- resulting Pages config ---"
+          gh api "repos/$REPO/pages" --jq '{status, url: .html_url, branch: .source.branch, path: .source.path}'
