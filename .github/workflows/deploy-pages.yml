@@ -8,28 +8,39 @@ on:
 permissions:
   contents: read
   pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  # Point GitHub Pages at this branch's root. Once set, Pages rebuilds on
-  # every push by itself — no deployment environment, and nothing to switch
-  # on by hand in the repository settings.
-  enable-pages:
+  # Kept free of an `environment:` block on purpose: the github-pages
+  # environment does not exist until Pages is switched on, and a job that
+  # names a missing environment is rejected before its steps can run.
+  configure:
     runs-on: ubuntu-latest
     steps:
-      - name: Serve this branch on Pages
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref_name }}
-        run: |
-          set -eu
-          printf '{"source":{"branch":"%s","path":"/"}}' "$BRANCH" > body.json
-          echo "Requesting Pages for $REPO on branch $BRANCH"
-          if gh api -X POST "repos/$REPO/pages" --input body.json; then
-            echo "Pages created."
-          else
-            echo "Pages already exists — updating its source instead."
-            gh api -X PUT "repos/$REPO/pages" --input body.json
-          fi
-          echo "--- resulting Pages config ---"
-          gh api "repos/$REPO/pages" --jq '{status, url: .html_url, branch: .source.branch, path: .source.path}'
+      - name: Switch Pages on
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+  deploy:
+    needs: configure
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the site
+        uses: actions/checkout@v4
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
